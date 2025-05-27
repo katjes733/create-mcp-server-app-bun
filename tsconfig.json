@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "outDir": "./dist/",
+    "outDir": "./build/",
     "lib": ["ESNext"],
     "target": "ESNext",
     "module": "ESNext",
@@ -10,7 +10,7 @@
     "types": ["bun-types"],
     "baseUrl": "./src",
     "paths": {
-      "~/*": ["*"],
+      "~/*": ["*"]
     },
 
     /* Bundler mode */
@@ -23,6 +23,6 @@
     "skipLibCheck": true,
     "strict": true,
     "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true,
-  },
+    "forceConsistentCasingInFileNames": true
+  }
 }

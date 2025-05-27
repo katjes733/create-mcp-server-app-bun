@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import ts from "@typescript-eslint/eslint-plugin";
 import parser from "@typescript-eslint/parser";
+import globals from "globals";
 
 export default [
   js.configs.recommended, // ESLint recommended rules
@@ -12,7 +13,9 @@ export default [
       ecmaVersion: "latest",
       sourceType: "module",
       globals: {
-        process: true, // Allow Node.js global variables
+        ...globals.node,
+        console: true,
+        process: true,
         module: true,
         require: true, // If using CommonJS
         Bun: true, // Bun-specific global
