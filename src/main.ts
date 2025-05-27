@@ -1,12 +1,140 @@
-import log from "./log";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import { initProject, projectExists, replaceProject } from "./helper.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import logger from "./log.js";
 
-// eslint-disable-next-line no-undef
-const server = Bun.serve({
-  port: 3000,
-  // eslint-disable-next-line no-unused-vars
-  fetch(req) {
-    return new Response("Bun!");
+const TOOL_NAME = "create-mcp-server-app";
+const TOOL_DESCRIPTION = `
+Initialize a new project for creating MCP server with sample code in the desktop.
+Parameters:
+- 'name': name of the project.
+- 'path': path where the project will be created, default is 'Documents/projects'.
+- 'action' (optional): set to "replace" to overwrite an existing project. Otherwise, it defaults to "create".
+`;
+const DEFAULT_PROJECT_PATH = "Documents/projects";
+const DEFAULT_ACTION = "create";
+
+const server = new Server(
+  {
+    name: "create-mcp-app",
+    version: "1.0.0",
   },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
+
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: TOOL_NAME,
+        description: TOOL_DESCRIPTION,
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            path: { type: "string", default: DEFAULT_PROJECT_PATH },
+            action: {
+              type: "string",
+              enum: ["create", "replace"],
+              default: DEFAULT_ACTION,
+            },
+          },
+          required: ["name"],
+        },
+      },
+    ],
+  };
 });
 
-log.info(`Listening on http://localhost:${server.port} ...`);
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  if (
+    request.params.name === TOOL_NAME &&
+    request.params.arguments !== undefined
+  ) {
+    const {
+      name,
+      path,
+      action: actionValue,
+    } = request.params.arguments as {
+      name: string;
+      path?: string;
+      action?: "create" | "replace";
+    };
+    if (typeof name !== "string") throw new Error("Bad project name.");
+    const projectPath = path || DEFAULT_PROJECT_PATH;
+    const action = actionValue || DEFAULT_ACTION;
+
+    const exists = await projectExists(name, projectPath);
+    if (exists) {
+      if (action === "create") {
+        return {
+          content: [
+            {
+              type: "text",
+              text:
+                `Project "${name}" already exists at ${projectPath}. ` +
+                `To overwrite it, please resubmit with "action": "replace", ` +
+                `or provide a new project name.`,
+            },
+          ],
+        };
+      } else if (action === "replace") {
+        await replaceProject(name, projectPath);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Replaced starter project: ${name} for creating an MCP server is created in ~/${projectPath}.`,
+            },
+          ],
+        };
+      }
+    }
+
+    try {
+      await initProject(name, projectPath);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `New starter project: ${name} for creating an MCP server is created in ~/${projectPath}.`,
+          },
+        ],
+      };
+    } catch (err) {
+      let errorMessage = "Error occurred while creating the project.";
+      if (err instanceof Error) {
+        errorMessage += " " + err.message;
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: errorMessage,
+          },
+        ],
+      };
+    }
+  }
+
+  throw new Error("Tool not found");
+});
+
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  logger.info("Create-MCP-Project Server running on stdio.");
+}
+
+main().catch((error) => {
+  logger.error("Fatal error while running server:", error);
+  process.exit(1);
+});
