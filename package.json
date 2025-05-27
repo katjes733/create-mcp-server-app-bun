@@ -1,0 +1,47 @@
+{
+  "name": "starter-ts-bun",
+  "module": "main.ts",
+  "type": "module",
+  "scripts": {
+    "eslint": "bun x eslint src/*",
+    "eslint:fix": "bun eslint -- --quiet --fix",
+    "prettier": "bun x prettier --check src/*",
+    "prettier:fix": "bun x prettier --write src/*",
+    "start": "bun run src/main.ts",
+    "stylelint": "stylelint 'src/**/*.tsx' --aei",
+    "stylelint:fix": "stylelint 'src/**/*.tsx' --aei --fix",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
+    "tsc": "tsc --noEmit",
+    "verify": "bun prettier && bun eslint && bun stylelint && bun tsc && bun test:coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/katjes733/starter-ts-bun"
+  },
+  "keywords": [
+    "typescript",
+    "bun",
+    "starter"
+  ],
+  "author": "Martin Macecek",
+  "license": "MIT License",
+  "devDependencies": {
+    "@types/bun": "^1.0.2",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "bun-types": "^1.0.23",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4",
+    "stylelint": "^16.1.0",
+    "stylelint-config-prettier": "^9.0.5",
+    "stylelint-config-recommended": "^14.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "pino": "^8.18.0",
+    "pino-pretty": "^10.3.1"
+  }
+}
