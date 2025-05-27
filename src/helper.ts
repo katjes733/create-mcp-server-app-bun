@@ -14,7 +14,7 @@ const homeDir = os.homedir();
 
 export async function initProject(
   projectName: string,
-  projectPath: string
+  projectPath: string,
 ): Promise<void> {
   const root = pathModule.join(homeDir, projectPath, projectName);
   const source = pathModule.join(root, "src");
@@ -25,15 +25,15 @@ export async function initProject(
 
   await writeContent(
     INDEX_TEXT.replaceAll(PROJECT_NAME, projectName),
-    pathModule.join(source, "index.ts")
+    pathModule.join(source, "main.ts"),
   );
   await writeContent(
     PACKAGE_JSON.replaceAll(PROJECT_NAME, projectName),
-    pathModule.join(root, "package.json")
+    pathModule.join(root, "package.json"),
   );
   await writeContent(
     TSCONFIG.replaceAll(PROJECT_NAME, projectName),
-    pathModule.join(root, "tsconfig.json")
+    pathModule.join(root, "tsconfig.json"),
   );
 
   executeCommand("bun install", root);
@@ -43,7 +43,7 @@ export async function initProject(
 
 export async function replaceProject(
   projectName: string,
-  projectPath: string
+  projectPath: string,
 ): Promise<void> {
   const root = pathModule.join(homeDir, projectPath, projectName);
   if (fs.existsSync(root)) {
@@ -54,7 +54,7 @@ export async function replaceProject(
 
 async function writeContent(
   content: string,
-  destination: string
+  destination: string,
 ): Promise<void> {
   try {
     await writeFile(destination, content, "utf8");
@@ -67,7 +67,7 @@ async function writeContent(
 
 export async function projectExists(
   projectName: string,
-  projectPath: string
+  projectPath: string,
 ): Promise<boolean> {
   try {
     const root = pathModule.join(homeDir, projectPath, projectName);

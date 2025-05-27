@@ -1,9 +1,14 @@
 {
-  "name": "starter-ts-bun",
-  "module": "main.ts",
+  "name": "create-mcp-server-app-bun",
+  "version": "1.0.0",
+  "description": "MCP Server to create Model Context Protocol (MCP) applications using Bun",
+  "main": "main.ts",
   "type": "module",
+  "bin": {
+    "create-mcp-server": "build/main.js"
+  },
   "scripts": {
-    "build": "bun build src/**/*.ts --outdir build --target bun",
+    "build": "bun build src/main.ts --outdir build --target bun",
     "eslint": "bun x eslint src/*",
     "eslint:fix": "bun eslint -- --quiet --fix",
     "prettier": "bun x prettier --check src/*",
@@ -16,6 +21,9 @@
     "tsc": "tsc --noEmit",
     "verify": "bun prettier && bun eslint && bun stylelint && bun tsc && bun test:coverage"
   },
+  "files": [
+    "build"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/katjes733/create-mcp-server-bun"
