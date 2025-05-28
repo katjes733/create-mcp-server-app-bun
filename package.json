@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "bun build src/main.ts --outdir build --target bun --minify",
-    "eslint": "bun x eslint src/*",
+    "eslint": "bun x eslint src",
     "eslint:fix": "bun eslint -- --quiet --fix",
     "prettier": "bun x prettier --check src/*",
     "prettier:fix": "bun x prettier --write src/*",

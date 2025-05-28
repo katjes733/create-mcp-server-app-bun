@@ -41,7 +41,7 @@ export async function initProject(
   executeCommand("bun run build", root);
 }
 
-export async function replaceProject(
+export async function removeProject(
   projectName: string,
   projectPath: string,
 ): Promise<void> {
@@ -49,7 +49,6 @@ export async function replaceProject(
   if (fs.existsSync(root)) {
     fs.rmSync(root, { recursive: true, force: true });
   }
-  await initProject(projectName, projectPath);
 }
 
 async function writeContent(

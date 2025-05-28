@@ -2,7 +2,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { initProject, projectExists, replaceProject } from "./helper.js";
+import { initProject, projectExists, removeProject } from "./helper.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import logger from "./log.js";
@@ -11,7 +11,7 @@ const TOOL_NAME = "create-mcp-server-app";
 const TOOL_DESCRIPTION = `
 Initialize a new project for creating MCP server with sample code in the desktop.
 Parameters:
-- 'name': name of the project.
+- 'name' (optional): name of the project. If none provided, it will be requested from the user.
 - 'path': path where the project will be created, default is 'Documents/projects'.
 - 'action' (optional): set to "replace" to overwrite an existing project. Otherwise, it defaults to "create".
 `;
@@ -47,7 +47,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               default: DEFAULT_ACTION,
             },
           },
-          required: ["name"],
+          required: [],
         },
       },
     ],
@@ -64,48 +64,67 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       path,
       action: actionValue,
     } = request.params.arguments as {
-      name: string;
+      name?: string;
       path?: string;
       action?: "create" | "replace";
     };
-    if (typeof name !== "string") throw new Error("Bad project name.");
+
+    if (!name || name.trim() === "") {
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              "The 'name' parameter is required but was not provided. Ask the user for the name of the project explicitly." +
+              "Do not make up project name on your own. Always ask the user for a name.",
+          },
+        ],
+      };
+    }
+
     const projectPath = path || DEFAULT_PROJECT_PATH;
     const action = actionValue || DEFAULT_ACTION;
 
     const exists = await projectExists(name, projectPath);
-    if (exists) {
-      if (action === "create") {
+    if (exists && action === "create") {
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `Project "${name}" already exists at ${projectPath}. ` +
+              `Always ask to what action the user wants to do next: replace/overwrite existing or create project with different name.` +
+              `Please resubmit with "action": "replace" to overwrite, or have user provide a new project name.` +
+              `Do not make up project name on your own. Always ask the user for a name.` +
+              `Do not make up the action on your own. Always ask the user for an action.`,
+          },
+        ],
+      };
+    }
+
+    try {
+      let text;
+      if (action === "replace") {
+        await removeProject(name, projectPath);
+        text = `Replaced starter project: ${name} for creating an MCP server is created in ~/${projectPath}.`;
+      } else if (action === "create") {
+        text = `New starter project: ${name} for creating an MCP server is created in ~/${projectPath}.`;
+      } else {
         return {
           content: [
             {
               type: "text",
-              text:
-                `Project "${name}" already exists at ${projectPath}. ` +
-                `To overwrite it, please resubmit with "action": "replace", ` +
-                `or provide a new project name.`,
-            },
-          ],
-        };
-      } else if (action === "replace") {
-        await replaceProject(name, projectPath);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Replaced starter project: ${name} for creating an MCP server is created in ~/${projectPath}.`,
+              text: `Invalid action "${action}". Use "create" or "replace".`,
             },
           ],
         };
       }
-    }
-
-    try {
       await initProject(name, projectPath);
       return {
         content: [
           {
             type: "text",
-            text: `New starter project: ${name} for creating an MCP server is created in ~/${projectPath}.`,
+            text,
           },
         ],
       };

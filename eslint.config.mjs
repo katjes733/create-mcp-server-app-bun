@@ -1,13 +1,14 @@
+import { defineConfig } from "eslint/config";
 import js from "@eslint/js";
 import ts from "@typescript-eslint/eslint-plugin";
 import parser from "@typescript-eslint/parser";
 import globals from "globals";
 
-export default [
+export default defineConfig([
   js.configs.recommended, // ESLint recommended rules
   {
     name: "node-bun-config",
-    files: ["**/*.ts", "**/*.tsx"],
+    files: ["src/**/*.ts", "src/**/*.tsx"],
     languageOptions: {
       parser,
       ecmaVersion: "latest",
@@ -33,5 +34,6 @@ export default [
         node: true, // Ensure Node.js/Bun module resolution
       },
     },
+    ignores: ["**/__tests__/**", "**/*.test.ts"],
   },
-];
+]);
