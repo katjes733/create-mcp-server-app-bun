@@ -8,7 +8,7 @@
     "create-mcp-server": "build/main.js"
   },
   "scripts": {
-    "build": "bun build src/main.ts --outdir build --target bun",
+    "build": "bun build src/main.ts --outdir build --target bun --minify",
     "eslint": "bun x eslint src/*",
     "eslint:fix": "bun eslint -- --quiet --fix",
     "prettier": "bun x prettier --check src/*",

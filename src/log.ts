@@ -7,7 +7,7 @@ const log = pino({
     level: (label: string): { level: string } => ({ level: label }),
     bindings: (): Record<string, unknown> => ({}),
   },
-  ...((Bun.env.LOG_PRETTY_PRINT ?? true) && {
+  ...((Bun.env.LOG_PRETTY_PRINT ?? false) && {
     transport: {
       target: "pino-pretty",
       options: {

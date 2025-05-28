@@ -30,11 +30,11 @@ describe("Logger configuration in log.ts", () => {
     expect(log.level).toBe("debug");
   });
 
-  it("should include transport configuration when LOG_PRETTY_PRINT is undefined (defaulting to true)", async () => {
+  it("should include transport configuration when LOG_PRETTY_PRINT is undefined (defaulting to false)", async () => {
     delete Bun.env.LOG_PRETTY_PRINT;
     const { default: log } = await loadLogger();
     expect(log).toBeDefined();
-    expect(() => log.info("Testing pretty print branch")).not.toThrow();
+    expect(() => log.info("Testing non-pretty print branch")).not.toThrow();
   });
 
   it("should skip adding transport configuration when LOG_PRETTY_PRINT is set to false", async () => {
@@ -42,5 +42,12 @@ describe("Logger configuration in log.ts", () => {
     const { default: log } = await loadLogger();
     expect(log).toBeDefined();
     expect(() => log.info("Testing non-pretty print branch")).not.toThrow();
+  });
+
+  it("should skip adding transport configuration when LOG_PRETTY_PRINT is set to true", async () => {
+    Bun.env.LOG_PRETTY_PRINT = "true";
+    const { default: log } = await loadLogger();
+    expect(log).toBeDefined();
+    expect(() => log.info("Testing pretty print branch")).not.toThrow();
   });
 });
