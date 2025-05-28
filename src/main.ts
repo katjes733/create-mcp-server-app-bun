@@ -9,7 +9,11 @@ import logger from "./log.js";
 
 const TOOL_NAME = "create-mcp-server-app";
 const TOOL_DESCRIPTION = `
-Initialize a new project for creating MCP server with sample code in the desktop.
+Initialize a new project for creating an MCP server with sample code in the desktop.
+System Prompt:
+- Always ask the user for the 'name' of the project if it is not provided. Avoid inferring or making up a name.
+- If the project already exists, ask the user whether to overwrite it ("replace") or create a new project with a different name.
+- Avoid assuming actions or names. Always explicitly ask the user for missing information.
 Parameters:
 - 'name' (optional): name of the project. If none provided, it will be requested from the user.
 - 'path': path where the project will be created, default is 'Documents/projects'.
@@ -27,7 +31,7 @@ const server = new Server(
     capabilities: {
       tools: {},
     },
-  },
+  }
 );
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -74,9 +78,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         content: [
           {
             type: "text",
-            text:
-              "The 'name' parameter is required but was not provided. Ask the user for the name of the project explicitly." +
-              "Do not make up project name on your own. Always ask the user for a name.",
+            text: "The 'name' parameter is required but was not provided. Ask the user for the name of the project explicitly.",
           },
         ],
       };
@@ -94,9 +96,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             text:
               `Project "${name}" already exists at ${projectPath}. ` +
               `Always ask to what action the user wants to do next: replace/overwrite existing or create project with different name.` +
-              `Please resubmit with "action": "replace" to overwrite, or have user provide a new project name.` +
-              `Do not make up project name on your own. Always ask the user for a name.` +
-              `Do not make up the action on your own. Always ask the user for an action.`,
+              `Please resubmit with "action": "replace" to overwrite, or have user provide a new project name.`,
           },
         ],
       };
