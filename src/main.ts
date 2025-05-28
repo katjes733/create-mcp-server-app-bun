@@ -31,7 +31,7 @@ const server = new Server(
     capabilities: {
       tools: {},
     },
-  }
+  },
 );
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -78,7 +78,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         content: [
           {
             type: "text",
-            text: "The 'name' parameter is required but was not provided. Ask the user for the name of the project explicitly.",
+            text: "The 'name' parameter is required, but was not provided. Ask the user for the name of the project explicitly.",
           },
         ],
       };

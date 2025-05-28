@@ -19,5 +19,7 @@
     "javascript",
     "javascriptreact",
     "graphql"
-  ]
+  ],
+  "prettier.trailingComma": "all",
+  "prettier.useEditorConfig": false
 }
