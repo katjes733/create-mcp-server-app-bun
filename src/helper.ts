@@ -1,15 +1,21 @@
-// helper.ts (refactored)
-
 import pathModule from "path";
 import os from "os";
 import { execSync } from "child_process";
 import { writeFile } from "fs/promises";
 import * as fs from "fs";
 import {
-  INDEX_TEXT,
+  MAIN_TEXT,
   PACKAGE_JSON,
   TSCONFIG,
   PROJECT_NAME,
+  ESLINT_CONFIG,
+  GIT_IGNORE,
+  PRETTIER_IGNORE,
+  STYLELINT_CONFIG,
+  README,
+  GITHUB_WORKFLOWS_VERIFY,
+  VSCODE_EXTENSIONS,
+  VSCODE_SETTINGS,
 } from "./constants.js";
 
 /* eslint-disable no-unused-vars */
@@ -29,7 +35,6 @@ export interface CommandExecutor {
 }
 /* eslint-enable no-unused-vars */
 
-// Provide default implementations.
 const defaultFs: FileSystem = {
   existsSync: fs.existsSync,
   mkdirSync: fs.mkdirSync,
@@ -42,7 +47,6 @@ const defaultExecutor: CommandExecutor = {
   execSync: execSync,
 };
 
-// Now encapsulate helper functions in a class.
 export class ProjectHelper {
   private fs: FileSystem;
   private exec: CommandExecutor;
@@ -64,13 +68,23 @@ export class ProjectHelper {
   async initProject(projectName: string, projectPath: string): Promise<void> {
     const root = this.path.join(this.homeDir, projectPath, projectName);
     const source = this.path.join(root, "src");
+    const githubWorkflows = this.path.join(root, ".github", "workflows");
+    const vscode = this.path.join(root, ".vscode");
 
     if (!this.fs.existsSync(source)) {
       this.fs.mkdirSync(source, { recursive: true });
     }
 
+    if (!this.fs.existsSync(githubWorkflows)) {
+      this.fs.mkdirSync(githubWorkflows, { recursive: true });
+    }
+
+    if (!this.fs.existsSync(vscode)) {
+      this.fs.mkdirSync(vscode, { recursive: true });
+    }
+
     await this.writeContent(
-      INDEX_TEXT.replaceAll(PROJECT_NAME, projectName),
+      MAIN_TEXT.replaceAll(PROJECT_NAME, projectName),
       this.path.join(source, "main.ts"),
     );
     await this.writeContent(
@@ -81,8 +95,41 @@ export class ProjectHelper {
       TSCONFIG.replaceAll(PROJECT_NAME, projectName),
       this.path.join(root, "tsconfig.json"),
     );
+    await this.writeContent(
+      ESLINT_CONFIG.replaceAll(PROJECT_NAME, projectName),
+      this.path.join(root, "eslint.config.mjs"),
+    );
+    await this.writeContent(
+      GIT_IGNORE.replaceAll(PROJECT_NAME, projectName),
+      this.path.join(root, ".gitignore"),
+    );
+    await this.writeContent(
+      PRETTIER_IGNORE.replaceAll(PROJECT_NAME, projectName),
+      this.path.join(root, ".prettierignore"),
+    );
+    await this.writeContent(
+      STYLELINT_CONFIG.replaceAll(PROJECT_NAME, projectName),
+      this.path.join(root, ".stylelintrc.yml"),
+    );
+    await this.writeContent(
+      README.replaceAll(PROJECT_NAME, projectName),
+      this.path.join(root, "README.md"),
+    );
+    await this.writeContent(
+      GITHUB_WORKFLOWS_VERIFY.replaceAll(PROJECT_NAME, projectName),
+      this.path.join(githubWorkflows, "verify.xml"),
+    );
+    await this.writeContent(
+      VSCODE_EXTENSIONS.replaceAll(PROJECT_NAME, projectName),
+      this.path.join(vscode, "extensions.json"),
+    );
+    await this.writeContent(
+      VSCODE_SETTINGS.replaceAll(PROJECT_NAME, projectName),
+      this.path.join(vscode, "settings.json"),
+    );
 
     this.executeCommand("bun install", root);
+    this.executeCommand("bun run verify", root);
     this.executeCommand("bun run build", root);
   }
 
@@ -111,7 +158,7 @@ export class ProjectHelper {
     destination: string,
   ): Promise<void> {
     try {
-      await this.fs.writeFile(destination, content, "utf8");
+      await this.fs.writeFile(destination, content.trimStart(), "utf8");
     } catch (err) {
       if (err instanceof Error) {
         throw new Error(err.message);

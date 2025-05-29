@@ -1,7 +1,20 @@
 import { describe, it, expect, beforeEach, jest } from "bun:test";
 import path from "path";
 import { ProjectHelper, FileSystem, CommandExecutor } from "../helper";
-import { INDEX_TEXT, PACKAGE_JSON, TSCONFIG, PROJECT_NAME } from "../constants";
+import {
+  MAIN_TEXT,
+  PACKAGE_JSON,
+  TSCONFIG,
+  PROJECT_NAME,
+  ESLINT_CONFIG,
+  GIT_IGNORE,
+  PRETTIER_IGNORE,
+  STYLELINT_CONFIG,
+  README,
+  GITHUB_WORKFLOWS_VERIFY,
+  VSCODE_EXTENSIONS,
+  VSCODE_SETTINGS,
+} from "../constants";
 
 type Mocked<T> = {
   [P in keyof T]: T[P] extends (...args: any[]) => any
@@ -18,6 +31,8 @@ describe("ProjectHelper", () => {
   const projectPath = "projects";
   let root: string;
   let source: string;
+  let githubWorkflows: string;
+  let vscode: string;
 
   beforeEach(() => {
     dummyFs = {
@@ -38,37 +53,100 @@ describe("ProjectHelper", () => {
 
     root = path.join(dummyHomeDir, projectPath, projectName);
     source = path.join(root, "src");
+    githubWorkflows = path.join(root, ".github", "workflows");
+    vscode = path.join(root, ".vscode");
 
     jest.clearAllMocks();
   });
 
   describe("initProject", () => {
     it("creates src directory if missing, writes files, and executes commands", async () => {
-      dummyFs.existsSync.mockImplementation((p: string) =>
-        p === source ? false : true,
-      );
+      dummyFs.existsSync.mockImplementation((p: string) => {
+        if (p === source || p === githubWorkflows || p === vscode) {
+          return false;
+        }
+        return true;
+      });
 
       await helper.initProject(projectName, projectPath);
       expect(dummyFs.mkdirSync).toHaveBeenCalledWith(source, {
+        recursive: true,
+      });
+      expect(dummyFs.mkdirSync).toHaveBeenCalledWith(githubWorkflows, {
+        recursive: true,
+      });
+      expect(dummyFs.mkdirSync).toHaveBeenCalledWith(vscode, {
         recursive: true,
       });
 
       const mainTsPath = path.join(source, "main.ts");
       const packageJsonPath = path.join(root, "package.json");
       const tsconfigPath = path.join(root, "tsconfig.json");
+      const eslintConfigPath = path.join(root, "eslint.config.mjs");
+      const gitIgnorePath = path.join(root, ".gitignore");
+      const prettierIgnorePath = path.join(root, ".prettierignore");
+      const stylelintConfigPath = path.join(root, ".stylelintrc.yml");
+      const readmePath = path.join(root, "README.md");
+      const githubWorkflowsVerifyPath = path.join(
+        githubWorkflows,
+        "verify.xml",
+      );
+      const vscodeExtensionsPath = path.join(vscode, "extensions.json");
+      const vscodeSettingsPath = path.join(vscode, "settings.json");
 
-      const replacedIndex = INDEX_TEXT.replaceAll(PROJECT_NAME, projectName);
-      const replacedPkg = PACKAGE_JSON.replaceAll(PROJECT_NAME, projectName);
-      const replacedTsconfig = TSCONFIG.replaceAll(PROJECT_NAME, projectName);
+      const replacedMain = MAIN_TEXT.replaceAll(
+        PROJECT_NAME,
+        projectName,
+      ).trimStart();
+      const replacedPackageJson = PACKAGE_JSON.replaceAll(
+        PROJECT_NAME,
+        projectName,
+      ).trimStart();
+      const replacedTsconfig = TSCONFIG.replaceAll(
+        PROJECT_NAME,
+        projectName,
+      ).trimStart();
+      const replacedEslintConfig = ESLINT_CONFIG.replaceAll(
+        PROJECT_NAME,
+        projectName,
+      ).trimStart();
+      const replacedGitIgnore = GIT_IGNORE.replaceAll(
+        PROJECT_NAME,
+        projectName,
+      ).trimStart();
+      const replacedPrettierIgnore = PRETTIER_IGNORE.replaceAll(
+        PROJECT_NAME,
+        projectName,
+      ).trimStart();
+      const replacedStylelintConfig = STYLELINT_CONFIG.replaceAll(
+        PROJECT_NAME,
+        projectName,
+      ).trimStart();
+      const replacedReadme = README.replaceAll(
+        PROJECT_NAME,
+        projectName,
+      ).trimStart();
+      const replacedGithubWorkflowsVerify = GITHUB_WORKFLOWS_VERIFY.replaceAll(
+        PROJECT_NAME,
+        projectName,
+      ).trimStart();
+      const replacedVscodeExtensions = VSCODE_EXTENSIONS.replaceAll(
+        PROJECT_NAME,
+        projectName,
+      ).trimStart();
+      const replacedVscodeSettings = VSCODE_SETTINGS.replaceAll(
+        PROJECT_NAME,
+        projectName,
+      ).trimStart();
 
       expect(dummyFs.writeFile).toHaveBeenCalledWith(
         mainTsPath,
-        replacedIndex,
+        replacedMain,
         "utf8",
       );
       expect(dummyFs.writeFile).toHaveBeenCalledWith(
         packageJsonPath,
-        replacedPkg,
+        replacedPackageJson,
         "utf8",
       );
       expect(dummyFs.writeFile).toHaveBeenCalledWith(
@@ -76,8 +154,51 @@ describe("ProjectHelper", () => {
         replacedTsconfig,
         "utf8",
       );
+      expect(dummyFs.writeFile).toHaveBeenCalledWith(
+        eslintConfigPath,
+        replacedEslintConfig,
+        "utf8",
+      );
+      expect(dummyFs.writeFile).toHaveBeenCalledWith(
+        gitIgnorePath,
+        replacedGitIgnore,
+        "utf8",
+      );
+      expect(dummyFs.writeFile).toHaveBeenCalledWith(
+        prettierIgnorePath,
+        replacedPrettierIgnore,
+        "utf8",
+      );
+      expect(dummyFs.writeFile).toHaveBeenCalledWith(
+        stylelintConfigPath,
+        replacedStylelintConfig,
+        "utf8",
+      );
+      expect(dummyFs.writeFile).toHaveBeenCalledWith(
+        readmePath,
+        replacedReadme,
+        "utf8",
+      );
+      expect(dummyFs.writeFile).toHaveBeenCalledWith(
+        githubWorkflowsVerifyPath,
+        replacedGithubWorkflowsVerify,
+        "utf8",
+      );
+      expect(dummyFs.writeFile).toHaveBeenCalledWith(
+        vscodeExtensionsPath,
+        replacedVscodeExtensions,
+        "utf8",
+      );
+      expect(dummyFs.writeFile).toHaveBeenCalledWith(
+        vscodeSettingsPath,
+        replacedVscodeSettings,
+        "utf8",
+      );
 
       expect(dummyExec.execSync).toHaveBeenCalledWith("bun install", {
+        cwd: root,
+      });
+      expect(dummyExec.execSync).toHaveBeenCalledWith("bun run verify", {
         cwd: root,
       });
       expect(dummyExec.execSync).toHaveBeenCalledWith("bun run build", {

@@ -12,14 +12,7 @@
   "editor.insertSpaces": true,
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "eslint.validate": [
-    "typescript",
-    "typescriptreact",
-    "javascriptreact",
-    "javascript",
-    "javascriptreact",
-    "graphql"
-  ],
+  "eslint.validate": ["typescript", "typescriptreact"],
   "prettier.trailingComma": "all",
   "prettier.useEditorConfig": false
 }
