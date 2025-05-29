@@ -12,8 +12,12 @@ MCP server providing functionality to set up your own MCP server project using B
 
 ## Background
 
-This project utilizes Model Context Protocol (MCP) to facilitate a standardized tool (MCP server) to create a sample MCP project in a predefined location. In this example, I am integrating with Claude Desktop to run the MCP server and at the same time act as MCP client to interact with the MCP server.
+This project utilizes Model Context Protocol (MCP) to facilitate a standardized tool (MCP server) to create a sample MCP project in a predefined location.
+
+In this example, we are integrating with Claude Desktop to run the MCP server and at the same time act as MCP client to interact with the MCP server.
+
 The sample project generated follows the same structure as this project with some limitations in terms of generated code and configurations (e.g. no tests, no advanced logging).
+
 The choice to use Bun instead of NodeJS was intentional to also showcase that Bun has made significant strides towards becoming a true alternative to NodeJS. It is lightning fast, easy to set up and comes with a lot of functionality out of the box. It also integrates well with existing tool chains, such as ESLint and others.
 
 ## Prerequisites
