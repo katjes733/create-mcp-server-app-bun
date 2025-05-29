@@ -177,6 +177,10 @@ export async function runServer() {
   }
 }
 
-if (import.meta.main) {
-  runServer();
+export function startServer(isMain = import.meta.main) {
+  if (isMain) {
+    runServer();
+  }
 }
+
+startServer();

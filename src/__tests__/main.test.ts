@@ -14,6 +14,7 @@ import {
   callToolHandler,
   server,
   TOOL_NAME,
+  startServer,
 } from "../main";
 import { ProjectHelper } from "../helper";
 import logger from "../log";
@@ -236,6 +237,47 @@ describe("Main Module", () => {
         new Error("Connection failed"),
       );
       exitSpy.mockRestore();
+    });
+  });
+
+  describe("startServer", () => {
+    it("should call runServer when isMain is true", () => {
+      const runServerSpy = spyOn(
+        require("../main"),
+        "runServer",
+      ).mockImplementation(() => Promise.resolve());
+
+      startServer(true);
+
+      expect(runServerSpy).toHaveBeenCalled();
+
+      runServerSpy.mockRestore();
+    });
+
+    it("should not call runServer when isMain is false", () => {
+      const runServerSpy = spyOn(
+        require("../main"),
+        "runServer",
+      ).mockImplementation(() => {});
+
+      startServer(false);
+
+      expect(runServerSpy).not.toHaveBeenCalled();
+
+      runServerSpy.mockRestore();
+    });
+
+    it("should not call runServer when isMain is not defined", () => {
+      const runServerSpy = spyOn(
+        require("../main"),
+        "runServer",
+      ).mockImplementation(() => {});
+
+      startServer(false);
+
+      expect(runServerSpy).not.toHaveBeenCalled();
+
+      runServerSpy.mockRestore();
     });
   });
 });
