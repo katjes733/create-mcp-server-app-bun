@@ -7,8 +7,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import logger from "./log.js";
 
-const TOOL_NAME = "create-mcp-server-app";
-const TOOL_DESCRIPTION = `
+export const TOOL_NAME = "create-mcp-server-app";
+export const TOOL_DESCRIPTION = `
 Initialize a new project for creating an MCP server with sample code in the desktop.
 System Prompt:
 - Always ask the user for the 'name' of the project if it is not provided. Avoid inferring or making up a name.
@@ -19,10 +19,10 @@ Parameters:
 - 'path': path where the project will be created, default is 'Documents/projects'.
 - 'action' (optional): set to "replace" to overwrite an existing project. Otherwise, it defaults to "create".
 `;
-const DEFAULT_PROJECT_PATH = "Documents/projects";
-const DEFAULT_ACTION = "create";
+export const DEFAULT_PROJECT_PATH = "Documents/projects";
+export const DEFAULT_ACTION = "create";
 
-const server = new Server(
+export const server = new Server(
   {
     name: "create-mcp-app",
     version: "1.0.0",
@@ -34,7 +34,7 @@ const server = new Server(
   },
 );
 
-server.setRequestHandler(ListToolsRequestSchema, async () => {
+export const listToolsHandler = async () => {
   return {
     tools: [
       {
@@ -56,9 +56,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
     ],
   };
-});
+};
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+server.setRequestHandler(ListToolsRequestSchema, listToolsHandler);
+
+export const callToolHandler = async (request: {
+  params: {
+    name: string;
+    arguments?: {
+      name?: string;
+      path?: string;
+      action?: "create" | "replace" | string;
+    };
+  };
+}) => {
   if (
     request.params.name === TOOL_NAME &&
     request.params.arguments !== undefined
@@ -70,7 +81,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     } = request.params.arguments as {
       name?: string;
       path?: string;
-      action?: "create" | "replace";
+      action?: "create" | "replace" | string;
     };
 
     if (!name || name.trim() === "") {
@@ -103,7 +114,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     try {
-      let text;
+      let text: string;
       if (action === "replace") {
         await removeProject(name, projectPath);
         text = `Replaced starter project: ${name} for creating an MCP server is created in ~/${projectPath}.`;
@@ -145,15 +156,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 
   throw new Error("Tool not found");
-});
+};
 
-async function main() {
+server.setRequestHandler(CallToolRequestSchema, callToolHandler);
+
+export async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   logger.info("Create-MCP-Project Server running on stdio.");
 }
 
-main().catch((error) => {
-  logger.error("Fatal error while running server:", error);
-  process.exit(1);
-});
+export async function runServer() {
+  try {
+    await main();
+  } catch (error) {
+    logger.error("Fatal error while running server:", error);
+    process.exit(1);
+  }
+}
+
+if (import.meta.main) {
+  runServer();
+}
