@@ -52,7 +52,7 @@ This section is influenced by this general [guide](https://modelcontextprotocol.
 
 1. Start Claude Desktop and open Settings
    ![image](./doc/images/claude_settings.png)
-2. Click on “Developer” in the left-hand bar of the Settings pane, and then click on “Edit Config”:
+2. Click on `Developer` in the left-hand bar of the Settings pane, and then click on `Edit Config`:
    ![image](./doc/images/claude_developer_settings.png)
 3. Edit the file `claude_desktop_config.json` and add the following:
 
