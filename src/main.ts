@@ -2,7 +2,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { initProject, projectExists, removeProject } from "./helper.js";
+import { ProjectHelper } from "./helper.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import logger from "./log.js";
@@ -21,6 +21,8 @@ Parameters:
 `;
 export const DEFAULT_PROJECT_PATH = "Documents/projects";
 export const DEFAULT_ACTION = "create";
+
+const projectHelper = new ProjectHelper();
 
 export const server = new Server(
   {
@@ -98,7 +100,7 @@ export const callToolHandler = async (request: {
     const projectPath = path || DEFAULT_PROJECT_PATH;
     const action = actionValue || DEFAULT_ACTION;
 
-    const exists = await projectExists(name, projectPath);
+    const exists = await projectHelper.projectExists(name, projectPath);
     if (exists && action === "create") {
       return {
         content: [
@@ -116,7 +118,7 @@ export const callToolHandler = async (request: {
     try {
       let text: string;
       if (action === "replace") {
-        await removeProject(name, projectPath);
+        await projectHelper.removeProject(name, projectPath);
         text = `Replaced starter project: ${name} for creating an MCP server is created in ~/${projectPath}.`;
       } else if (action === "create") {
         text = `New starter project: ${name} for creating an MCP server is created in ~/${projectPath}.`;
@@ -130,7 +132,7 @@ export const callToolHandler = async (request: {
           ],
         };
       }
-      await initProject(name, projectPath);
+      await projectHelper.initProject(name, projectPath);
       return {
         content: [
           {
