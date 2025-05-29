@@ -4,9 +4,7 @@
     "yzhang.markdown-all-in-one",
     "dbaeumer.vscode-eslint",
     "stylelint.vscode-stylelint",
-    "kumar-harsh.graphql-for-vscode",
     "esbenp.prettier-vscode",
-    "prisma.prisma",
     "orta.vscode-jest",
     "timonwong.shellcheck"
   ]

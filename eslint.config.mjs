@@ -5,7 +5,7 @@ import parser from "@typescript-eslint/parser";
 import globals from "globals";
 
 export default defineConfig([
-  js.configs.recommended, // ESLint recommended rules
+  js.configs.recommended,
   {
     name: "node-bun-config",
     files: ["src/**/*.ts", "src/**/*.tsx"],
@@ -18,8 +18,8 @@ export default defineConfig([
         console: true,
         process: true,
         module: true,
-        require: true, // If using CommonJS
-        Bun: true, // Bun-specific global
+        require: true,
+        Bun: true,
       },
     },
     plugins: {
@@ -31,7 +31,7 @@ export default defineConfig([
     },
     settings: {
       "import/resolver": {
-        node: true, // Ensure Node.js/Bun module resolution
+        node: true,
       },
     },
     ignores: ["**/__tests__/**", "**/*.test.ts"],
