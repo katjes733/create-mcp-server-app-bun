@@ -117,7 +117,7 @@ export class ProjectHelper {
     );
     await this.writeContent(
       GITHUB_WORKFLOWS_VERIFY.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(githubWorkflows, "verify.xml"),
+      this.path.join(githubWorkflows, "verify.yml"),
     );
     await this.writeContent(
       VSCODE_EXTENSIONS.replaceAll(PROJECT_NAME, projectName),

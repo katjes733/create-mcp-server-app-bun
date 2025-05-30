@@ -89,7 +89,7 @@ describe("ProjectHelper", () => {
       const readmePath = path.join(root, "README.md");
       const githubWorkflowsVerifyPath = path.join(
         githubWorkflows,
-        "verify.xml",
+        "verify.yml",
       );
       const vscodeExtensionsPath = path.join(vscode, "extensions.json");
       const vscodeSettingsPath = path.join(vscode, "settings.json");
