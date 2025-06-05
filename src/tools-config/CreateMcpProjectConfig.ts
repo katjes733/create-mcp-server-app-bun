@@ -35,7 +35,76 @@ export const FILES: {
     filename: "SumCalculator.ts",
     relativePath: "src/tools",
     content: dedent`
-      // This tool calculates the sum of two numbers.
+      import dedent from "dedent";
+      import { AbstractTool } from "~/types/AbstractTool";
+      import type { ITool } from "~/types/ITool";
+
+      export class SumCalculator extends AbstractTool implements ITool {
+        // Explicit constructor definition to ensure test coverage in Bun tracks constructor.
+        constructor(fetch: typeof globalThis.fetch = globalThis.fetch) {
+          super(fetch);
+        }
+
+        getName() {
+          return "sum-calculator";
+        }
+
+        getDescription() {
+          return dedent\`
+            Add two numbers.
+            System Prompt:
+            - Always ask the user for the 'a' and 'b' parameters if they are not provided. Avoid inferring or making up values.
+            - If the parameters are not numbers, ask the user to provide valid numbers.
+            Parameters:
+            - 'a': first number to add. If not provided, it will be requested from the user.
+            - 'b': second number to add. If not provided, it will be requested from the user.
+          \`;
+        }
+
+        getInputSchema(): {
+          type: string;
+          properties: Record<string, any>;
+          required: string[];
+        } {
+          return {
+            type: "object",
+            properties: {
+              a: { type: "number" },
+              b: { type: "number" },
+            },
+            required: ["a", "b"],
+          };
+        }
+
+        validateWithDefaults(params: Record<string, any>): Record<string, any> {
+          const { a, b } = params;
+
+          if (typeof a !== "number" || typeof b !== "number") {
+            throw new Error("Bad parameter.");
+          }
+
+          return { a, b };
+        }
+
+        async processToolWorkflow(
+          params: Record<string, any>,
+        ): Promise<{ content: { type: string; text: string }[] }> {
+          const { a, b } = params;
+
+          return this.calculateSum(a, b).then((sum) => ({
+            content: [
+              {
+                type: "text",
+                text: String(sum),
+              },
+            ],
+          }));
+        }
+
+        private async calculateSum(a: number, b: number): Promise<number> {
+          return a + b;
+        }
+      }
     `,
   },
   {
@@ -62,7 +131,124 @@ export const FILES: {
     filename: "SumCalculator.test.ts",
     relativePath: "tests/tools",
     content: dedent`
-      // This tests the sum calculator tool.
+      import {
+        describe,
+        it,
+        expect,
+        beforeEach,
+        jest,
+        afterEach,
+        spyOn,
+      } from "bun:test";
+      import { SumCalculator } from "~/tools/SumCalculator";
+      import dedent from "dedent";
+
+      const mockFetch = jest.fn();
+
+      function createInstance() {
+        const instance = new SumCalculator(
+          mockFetch as unknown as typeof globalThis.fetch,
+        );
+        return instance;
+      }
+
+      describe("GridPointUrl", () => {
+        const originalAppName = process.env.APP_NAME;
+        const originalAppEmail = process.env.APP_EMAIL;
+
+        const expectedName = "sum-calculator";
+        const expectedDescription = dedent\`
+          Add two numbers.
+          System Prompt:
+          - Always ask the user for the 'a' and 'b' parameters if they are not provided. Avoid inferring or making up values.
+          - If the parameters are not numbers, ask the user to provide valid numbers.
+          Parameters:
+          - 'a': first number to add. If not provided, it will be requested from the user.
+          - 'b': second number to add. If not provided, it will be requested from the user.
+        \`;
+        const expectedInputSchema = {
+          type: "object",
+          properties: {
+            a: { type: "number" },
+            b: { type: "number" },
+          },
+          required: ["a", "b"],
+        };
+
+        beforeEach(() => {
+          process.env.APP_NAME = "weather-mcp-server";
+          process.env.APP_EMAIL = "some.email@net.com";
+          mockFetch.mockReset();
+        });
+
+        afterEach(() => {
+          process.env.APP_NAME = originalAppName;
+          process.env.APP_EMAIL = originalAppEmail;
+        });
+
+        it("getName returns correct name", () => {
+          const tool = createInstance();
+          expect(tool.getName()).toBe(expectedName);
+        });
+
+        it("getDescription returns a string", () => {
+          const tool = createInstance();
+          expect(typeof tool.getDescription()).toBe("string");
+          expect(tool.getDescription()).toBe(expectedDescription);
+        });
+
+        it("getInputSchema returns correct schema", () => {
+          const tool = createInstance();
+          const schema = tool.getInputSchema();
+          expect(schema).toEqual(expectedInputSchema);
+        });
+
+        it("validateWithDefaults accepts valid numbers", () => {
+          const tool = createInstance();
+          expect(tool.validateWithDefaults({ a: -10.5, b: 123.56 })).toEqual({
+            a: -10.5,
+            b: 123.56,
+          });
+          expect(tool.validateWithDefaults({ a: 90, b: -180 })).toEqual({
+            a: 90,
+            b: -180,
+          });
+        });
+
+        it("validateWithDefaults throws on invalid coordinates", () => {
+          const tool = createInstance();
+          expect(() => tool.validateWithDefaults({ a: "20", b: 180 })).toThrow(
+            "Bad parameter.",
+          );
+          expect(() => tool.validateWithDefaults({ a: 180, b: "" })).toThrow(
+            "Bad parameter.",
+          );
+        });
+
+        it("processToolWorkflow returns correct content for valid coordinates", async () => {
+          const tool = createInstance();
+          const calculateSumSpy = spyOn(tool as any, "calculateSum");
+          calculateSumSpy.mockResolvedValue(-45.67);
+          const result = await tool.processToolWorkflow({
+            a: 78,
+            b: 99,
+          });
+          expect(result).toEqual({
+            content: [
+              {
+                type: "text",
+                text: "-45.67",
+              },
+            ],
+          });
+        });
+
+        it("calculateSum calculates the expected sum", async () => {
+          const tool = createInstance();
+          const result = await tool["calculateSum"](-78.23, 99.59);
+          expect(result).toBe(21.36);
+        });
+      });
     `,
   },
   {
@@ -152,6 +338,9 @@ export const FILES: {
     filename: ".stylelintrc.yml",
   },
   {
+    filename: "bunfig.toml",
+  },
+  {
     filename: "README.md",
     content: dedent`
       # MCP Server Sample Project
@@ -165,10 +354,18 @@ export const FILES: {
         - [Build](#build)
         - [Setup Claude Desktop](#setup-claude-desktop)
         - [Usage](#usage)
+        - [Development](#development)
+          - [New Tools](#new-tools)
+          - [Test Coverage](#test-coverage)
+            - [Prerequisites (Development)](#prerequisites-development)
+            - [Running Test Coverage](#running-test-coverage)
 
       ## Background
 
       It demonstrates how to set up a basic server that can handle tool requests and execute them. It supports adding two numbers and includes a system prompt guiding the LLM to handles the request appropriately.
+      The project also contains all relevant tooling and linting to get started immediately.
+
+      To implement your own custom tool(s), follow the instructions in section [New Tools](#new-tools).
 
       ## Prerequisites
 
@@ -179,25 +376,25 @@ export const FILES: {
 
       1. Run:
 
-        \`\`\`sh
-        bun install
-        \`\`\`
+      \`\`\`sh
+      bun install
+      \`\`\`
 
       2. _(Optional)_ Run the following to verify integrity of the project:
 
-        \`\`\`sh
-        bun run verify
-        \`\`\`
+      \`\`\`sh
+      bun run verify
+      \`\`\`
 
       ## Build
 
       1. Run:
 
-        \`\`\`sh
-        bun run build
-        \`\`\`
+      \`\`\`sh
+      bun run build
+      \`\`\`
 
-      This will bundle all code into a single \`build/main.js\` that can be consumed.
+      This will bundle the entry \`build/main.js\`, which can then be consumed.
 
       ## Setup Claude Desktop
 
@@ -207,19 +404,19 @@ export const FILES: {
       2. Click on \`Developer\` in the left-hand bar of the Settings pane, and then click on \`Edit Config\`.
       3. Edit the file \`claude_desktop_config.json\` and add the following:
 
-        \`\`\`json
-        {
-          "mcpServers": {
-            "<sample-mcp-app>": {
-              "command": "bun",
-              "args": ["run", "<path_to_project>/build/main.js"]
-            }
+      \`\`\`json
+      {
+        "mcpServers": {
+          "<sample-mcp-app>": {
+            "command": "bun",
+            "args": ["run", "<path_to_project>/build/main.js"]
           }
         }
-        \`\`\`
+      }
+      \`\`\`
 
-        - Replace <sample-mcp-app> with the name of your MCP Server: e.g. \`my-mcp-server\`
-        - Replace <path_to_project> with the path to your project; e.g.: \`/Users/username/Documents/projects/create-mcp-server-app-bun\`
+      - Replace <sample-mcp-app> with the name of your MCP Server: e.g. \`my-mcp-server\`
+      - Replace <path_to_project> with the path to your project; e.g.: \`/Users/username/Documents/projects/create-mcp-server-app-bun\`
 
       4. Restart Claude Desktop; this is important as Claude Desktop will otherwise not apply changes to \`claude_desktop_config.json\`.
       5. On the main screen, click the \`Search and Tools\` button and then on your MCP server name. Ensure that it is enabled.
@@ -228,6 +425,79 @@ export const FILES: {
 
       1. You can start by simply asking Claude to add two numbers: \`add 2 and 3\`, which outputs the corresponding result.
       2. You can also ask Claude to add two numbers: \`add numbers\`. This will trigger a follow-up request to provide the two numbers. Once provided, the response will contain the corresponding result.
+
+      ## Development
+
+      ### New Tools
+
+      New tools may be added by ensuring each new tool module in \`./src/tools\` extends \`AbstractTool\` and implements \`ITool\` and provides an explicit constructor (for test coverage):
+
+      \`\`\`typescript
+      ...
+      export class NewTool extends AbstractTool implements ITool {
+        // Explicit constructor definition to ensure test coverage in Bun tracks constructor.
+        constructor(fetch: typeof globalThis.fetch = globalThis.fetch) {
+          super(fetch);
+        }
+      ...
+      \`\`\`
+
+      Additionally, the following methods must be implemented (see their corresponding \`JSDoc\` for details.):
+
+      - \`getName\`
+      - \`getDescription\`
+      - \`getInputSchema\`
+      - \`validateWithDefaults\`
+      - \`processToolWorkflow\`
+
+      Use existing tool(s) as guide for the implementation and don't forget to implement a corresponding test.
+
+      There is no further configuration required to register any additional tool; they are automatically included upon restart of the MCP server.
+
+      ### Test Coverage
+
+      It may be useful to analyze test coverage gaps using \`lcov\` reports, to gain better visibility into covered lines and functions.
+
+      **NOTES:**
+
+      - Constructors for classes should be defined in the respective class, as Bun only tracks a classes functions (including constructors). This is problematic when you inherit from an abstract class with its own constructor, which in turn is not tracked. Thus, simply define the Abstract constructor in the class and call \`super\`.
+      - Having some imports (e.g. \`import dedent from "dedent";\`) at the top of a module may cause Bun to not correctly track that line as covered. Simply move it behind other imports, and it will correctly track.
+
+      #### Prerequisites (Development)
+
+      1. Install \`lcov\`:
+
+        \`\`\`sh
+        brew install lcov
+        \`\`\`
+
+      2. Install VSCode extension \`ryanluker.vscode-coverage-gutters\` (already defined in [settings.json](./.vscode/settings.json)).
+
+      #### Running Test Coverage
+
+      1. For most cases, it will suffice to run:
+
+        \`\`\`sh
+        bun run test:coverage
+        \`\`\`
+
+        **NOTE:** If the coverage is less than 100, but no \`Uncovered Line #s\` are reported, you may need to investigate further by following the next steps and revisiting the [Notes](#test-coverage) above.
+
+      2. For advanced cases, run:
+
+        \`\`\`sh
+        bun run test:coverage:lcov
+        \`\`\`
+
+        It produces the \`lcov\` [coverage report](./coverage/lcov.info) that is used by VSCode extension \`ryanluker.vscode-coverage-gutters\` to visualize covered lines in the editor.
+
+      3. If you prefer to have an HTML report, run in your terminal:
+
+        \`\`\`sh
+        genhtml --function-coverage --branch-coverage --output-directory coverage-report coverage/lcov.info
+        \`\`\`
+
+        It produces an HTML [coverage report](./coverage-report/index.html) that you can inspect in your preferred browser.
     `,
   },
   {
