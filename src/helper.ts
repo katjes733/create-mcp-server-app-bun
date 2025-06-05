@@ -1,178 +1,77 @@
 import pathModule from "path";
-import os from "os";
-import { execSync } from "child_process";
-import { writeFile } from "fs/promises";
-import * as fs from "fs";
-import {
-  MAIN_TEXT,
-  PACKAGE_JSON,
-  TSCONFIG,
-  PROJECT_NAME,
-  ESLINT_CONFIG,
-  GIT_IGNORE,
-  PRETTIER_IGNORE,
-  STYLELINT_CONFIG,
-  README,
-  GITHUB_WORKFLOWS_VERIFY,
-  VSCODE_EXTENSIONS,
-  VSCODE_SETTINGS,
-} from "./constants.js";
+import fs from "fs/promises";
+import type { ITool } from "./types/ITool";
 
 /* eslint-disable no-unused-vars */
 export interface FileSystem {
-  existsSync: (path: string) => boolean;
-  mkdirSync: (path: string, options?: { recursive?: boolean }) => void;
-  rmSync: (
+  readdir: (
     path: string,
-    options?: { recursive?: boolean; force?: boolean },
-  ) => void;
-  writeFile: typeof writeFile;
-  access: (path: string) => Promise<void>;
-}
-
-export interface CommandExecutor {
-  execSync: (command: string, options: { cwd: string | undefined }) => void;
+    options?: { recursive?: boolean },
+  ) => Promise<string[]>;
 }
 /* eslint-enable no-unused-vars */
 
 const defaultFs: FileSystem = {
-  existsSync: fs.existsSync,
-  mkdirSync: fs.mkdirSync,
-  rmSync: fs.rmSync,
-  writeFile: writeFile,
-  access: fs.promises.access,
+  readdir: fs.readdir,
 };
 
-const defaultExecutor: CommandExecutor = {
-  execSync: execSync,
-};
-
-export class ProjectHelper {
+export class Helper {
+  private fetch: typeof globalThis.fetch;
   private fs: FileSystem;
-  private exec: CommandExecutor;
   private path: typeof pathModule;
-  private homeDir: string;
+  private tools: Map<string, ITool> | undefined = undefined;
+  private toolsLoading: Promise<void> | null = null;
 
   constructor(
+    fetchDep: typeof globalThis.fetch = globalThis.fetch,
     fsDep: FileSystem = defaultFs,
-    execDep: CommandExecutor = defaultExecutor,
     pathDep: typeof pathModule = pathModule,
-    osDep = os,
   ) {
+    this.fetch = fetchDep;
     this.fs = fsDep;
-    this.exec = execDep;
     this.path = pathDep;
-    this.homeDir = osDep.homedir();
   }
 
-  async initProject(projectName: string, projectPath: string): Promise<void> {
-    const root = this.path.join(this.homeDir, projectPath, projectName);
-    const source = this.path.join(root, "src");
-    const githubWorkflows = this.path.join(root, ".github", "workflows");
-    const vscode = this.path.join(root, ".vscode");
-
-    if (!this.fs.existsSync(source)) {
-      this.fs.mkdirSync(source, { recursive: true });
+  private async preloadTools(): Promise<void> {
+    if (this.tools) {
+      return;
     }
 
-    if (!this.fs.existsSync(githubWorkflows)) {
-      this.fs.mkdirSync(githubWorkflows, { recursive: true });
-    }
+    const toolsDir = this.path.join(__dirname, "tools");
+    const files = await this.fs.readdir(toolsDir, { recursive: true });
 
-    if (!this.fs.existsSync(vscode)) {
-      this.fs.mkdirSync(vscode, { recursive: true });
-    }
+    this.tools = new Map<string, ITool>();
 
-    await this.writeContent(
-      MAIN_TEXT.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(source, "main.ts"),
-    );
-    await this.writeContent(
-      PACKAGE_JSON.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(root, "package.json"),
-    );
-    await this.writeContent(
-      TSCONFIG.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(root, "tsconfig.json"),
-    );
-    await this.writeContent(
-      ESLINT_CONFIG.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(root, "eslint.config.mjs"),
-    );
-    await this.writeContent(
-      GIT_IGNORE.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(root, ".gitignore"),
-    );
-    await this.writeContent(
-      PRETTIER_IGNORE.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(root, ".prettierignore"),
-    );
-    await this.writeContent(
-      STYLELINT_CONFIG.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(root, ".stylelintrc.yml"),
-    );
-    await this.writeContent(
-      README.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(root, "README.md"),
-    );
-    await this.writeContent(
-      GITHUB_WORKFLOWS_VERIFY.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(githubWorkflows, "verify.yml"),
-    );
-    await this.writeContent(
-      VSCODE_EXTENSIONS.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(vscode, "extensions.json"),
-    );
-    await this.writeContent(
-      VSCODE_SETTINGS.replaceAll(PROJECT_NAME, projectName),
-      this.path.join(vscode, "settings.json"),
-    );
+    for (const file of files) {
+      if (file.endsWith(".ts")) {
+        const modulePath = this.path.join(toolsDir, file);
+        const module = await import(modulePath);
 
-    this.executeCommand("bun install", root);
-    this.executeCommand("bun run verify", root);
-    this.executeCommand("bun run build", root);
-  }
-
-  async removeProject(projectName: string, projectPath: string): Promise<void> {
-    const root = this.path.join(this.homeDir, projectPath, projectName);
-    if (this.fs.existsSync(root)) {
-      this.fs.rmSync(root, { recursive: true, force: true });
-    }
-  }
-
-  async projectExists(
-    projectName: string,
-    projectPath: string,
-  ): Promise<boolean> {
-    try {
-      const root = this.path.join(this.homeDir, projectPath, projectName);
-      await this.fs.access(root);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  protected async writeContent(
-    content: string,
-    destination: string,
-  ): Promise<void> {
-    try {
-      await this.fs.writeFile(destination, content.trimStart(), "utf8");
-    } catch (err) {
-      if (err instanceof Error) {
-        throw new Error(err.message);
+        for (const exportedClass of Object.values(module)) {
+          if (typeof exportedClass === "function") {
+            const instance = new (exportedClass as new () => ITool)();
+            if ("getName" in instance) {
+              this.tools.set(instance.getName(), instance);
+            }
+          }
+        }
       }
     }
   }
 
-  protected executeCommand(command: string, cwd: string | undefined): void {
-    try {
-      this.exec.execSync(command, { cwd });
-    } catch (err) {
-      if (err instanceof Error) {
-        throw new Error(err.message);
-      }
+  public async loadTools(): Promise<void> {
+    if (!this.toolsLoading) {
+      this.toolsLoading = this.preloadTools();
     }
+    await this.toolsLoading;
+  }
+
+  public getToolsSync(): Map<string, ITool> {
+    if (!this.tools) {
+      throw new Error(
+        "Tools have not been loaded yet. Call loadTools() first.",
+      );
+    }
+    return this.tools;
   }
 }
