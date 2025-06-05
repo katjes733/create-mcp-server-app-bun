@@ -18,8 +18,8 @@ export const DEFAULT_ACTION = "create";
 export class CreateMcpProject extends AbstractTool implements ITool {
   private pathModule: typeof path;
   private fsModule: typeof fs;
-  private osModule: typeof os;
   private cpModule: typeof cp;
+  private osModule: typeof os;
   private homeDir: string;
 
   private projectRoot!: string;
@@ -28,14 +28,14 @@ export class CreateMcpProject extends AbstractTool implements ITool {
     fetch: typeof globalThis.fetch = globalThis.fetch,
     pathModule: typeof path = path,
     fsModule: typeof fs = fs,
-    osModule: typeof os = os,
     cpModule: typeof cp = cp,
+    osModule: typeof os = os,
   ) {
     super(fetch);
     this.pathModule = pathModule;
     this.fsModule = fsModule;
-    this.osModule = osModule;
     this.cpModule = cpModule;
+    this.osModule = osModule;
     this.homeDir = this.osModule.homedir();
   }
 
@@ -87,12 +87,16 @@ export class CreateMcpProject extends AbstractTool implements ITool {
       );
     }
 
-    projectPath = this.pathModule.join(
-      "/",
-      projectPath || DEFAULT_PROJECT_PATH,
-    );
+    if (!projectPath) {
+      projectPath = DEFAULT_PROJECT_PATH;
+    }
+    if (typeof projectPath !== "string") {
+      throw new ToolValidationError(
+        `Invalid project path "${projectPath}". Ask user for a valid project path.`,
+      );
+    }
+    projectPath = this.pathModule.join("/", projectPath);
     if (
-      typeof projectPath !== "string" ||
       !this.pathModule.isAbsolute(projectPath) ||
       projectPath.includes("\0")
     ) {
@@ -129,7 +133,7 @@ export class CreateMcpProject extends AbstractTool implements ITool {
           {
             type: "text",
             text:
-              `Project "${name}" already exists at ${projectPath}. ` +
+              `Project "${name}" already exists at ~${projectPath}. ` +
               `Always ask to what action the user wants to do next: replace/overwrite existing or create project with different name.` +
               `Please resubmit with "action": "replace" to overwrite, or have user provide a new project name.`,
           },
@@ -141,9 +145,9 @@ export class CreateMcpProject extends AbstractTool implements ITool {
       let text: string;
       if (action === "replace") {
         await this.removeProject(name, projectPath);
-        text = `Replaced starter project: ${name} for creating an MCP server is created in ~/${projectPath}.`;
+        text = `Replaced starter project: "${name}" for creating an MCP server is created in ~${projectPath}.`;
       } else if (action === "create") {
-        text = `New starter project: ${name} for creating an MCP server is created in ~/${projectPath}.`;
+        text = `New starter project: "${name}" for creating an MCP server is created in ~${projectPath}.`;
       } else {
         return {
           content: [
@@ -183,22 +187,25 @@ export class CreateMcpProject extends AbstractTool implements ITool {
     projectName: string,
     projectPath: string,
   ): Promise<boolean> {
-    try {
-      const root = this.pathModule.join(this.homeDir, projectPath, projectName);
-      await this.fsModule.promises.access(root);
-      return true;
-    } catch {
-      return false;
-    }
+    const fullProjectPath = this.pathModule.join(
+      this.homeDir,
+      projectPath,
+      projectName,
+    );
+    return this.fsModule.existsSync(fullProjectPath);
   }
 
   private async removeProject(
     projectName: string,
     projectPath: string,
   ): Promise<void> {
-    const root = this.pathModule.join(this.homeDir, projectPath, projectName);
-    if (this.fsModule.existsSync(root)) {
-      this.fsModule.rmSync(root, { recursive: true, force: true });
+    const fullProjectPath = this.pathModule.join(
+      this.homeDir,
+      projectPath,
+      projectName,
+    );
+    if (this.fsModule.existsSync(fullProjectPath)) {
+      this.fsModule.rmSync(fullProjectPath, { recursive: true, force: true });
     }
   }
 
@@ -206,10 +213,14 @@ export class CreateMcpProject extends AbstractTool implements ITool {
     projectName: string,
     projectPath: string,
   ): Promise<void> {
-    const root = this.pathModule.join(this.homeDir, projectPath, projectName);
-    this.createDirectories(root);
-    this.createFiles(root, projectName);
-    this.executeScripts(root);
+    const fullProjectPath = this.pathModule.join(
+      this.homeDir,
+      projectPath,
+      projectName,
+    );
+    this.createDirectories(fullProjectPath);
+    this.createFiles(fullProjectPath, projectName);
+    this.executeScripts(fullProjectPath);
   }
 
   private async createDirectories(root: string): Promise<void> {
@@ -236,7 +247,7 @@ export class CreateMcpProject extends AbstractTool implements ITool {
       );
       if (!this.fsModule.existsSync(filePath)) {
         const content = await this.getFileContent(item);
-        await this.fsModule.promises.writeFile(
+        this.fsModule.writeFileSync(
           filePath,
           content.replaceAll(PROJECT_NAME, projectName),
           "utf-8",
@@ -252,7 +263,7 @@ export class CreateMcpProject extends AbstractTool implements ITool {
 
     return this.fsModule.readFileSync(
       this.pathModule.join(
-        this.findProjectRoot(),
+        this.getProjectRoot(),
         item.relativePath || ".",
         item.filename,
       ),
@@ -260,14 +271,14 @@ export class CreateMcpProject extends AbstractTool implements ITool {
     );
   }
 
-  private findProjectRoot(): string {
+  private getProjectRoot(): string {
     if (!this.projectRoot) {
-      let dir = this.pathModule.dirname(import.meta.path);
+      let dir = this.pathModule.dirname(this.getImportMetaPath());
       while (
-        !this.fsModule.existsSync(path.join(dir, "package.json")) &&
+        !this.fsModule.existsSync(this.pathModule.join(dir, "package.json")) &&
         dir !== "/"
       ) {
-        dir = path.dirname(dir);
+        dir = this.pathModule.dirname(dir);
       }
       if (dir === "/") {
         throw new Error("Project root not found.");
@@ -278,19 +289,24 @@ export class CreateMcpProject extends AbstractTool implements ITool {
     return this.projectRoot;
   }
 
+  private getImportMetaPath(): string {
+    return import.meta.path;
+  }
+
   private executeScripts(root: string): void {
     SCRIPTS.forEach((script) => {
-      this.executeCommand(script.command, script.workingDirectory || root);
+      this.executeCommand(
+        script.command,
+        this.pathModule.join("/", script.workingDirectory || root),
+      );
     });
   }
 
-  private executeCommand(command: string, cwd: string | undefined): void {
+  private executeCommand(command: string, cwd?: string): void {
     try {
       this.cpModule.execSync(command, { cwd });
     } catch (err) {
-      if (err instanceof Error) {
-        throw new Error(err.message);
-      }
+      throw new Error(`Failed to execute command: ${command}`, { cause: err });
     }
   }
 }
