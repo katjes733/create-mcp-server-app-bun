@@ -39,7 +39,11 @@ The choice to use Bun instead of NodeJS was intentional to also showcase that Bu
    bun install
    ```
 
-3. _(Optional)_ Run the following to verify integrity of the project:
+3. Create a `.env` file in the root based on `/env/sample.env`. Provide values as necessary and described.
+
+   **NOTE:** This is mostly relevant if you wish to run the server in development mode via `bun run start`.
+
+4. _(Optional)_ Run the following to verify integrity of the project:
 
    ```sh
    bun run verify
