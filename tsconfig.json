@@ -25,5 +25,4 @@
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true
   },
-  "exclude": ["**/__tests__/**", "**/*.test.ts"]
 }

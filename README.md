@@ -9,6 +9,11 @@ MCP server providing functionality to set up your own MCP server project using B
   - [Build](#build)
   - [Setup Claude Desktop](#setup-claude-desktop)
   - [Usage](#usage)
+  - [Development](#development)
+    - [New Tools](#new-tools)
+    - [Test Coverage](#test-coverage)
+      - [Prerequisites (Development)](#prerequisites-development)
+      - [Running Test Coverage](#running-test-coverage)
 
 ## Background
 
@@ -16,7 +21,7 @@ This project utilizes Model Context Protocol (MCP) to facilitate a standardized 
 
 In this example, we are integrating with Claude Desktop to run the MCP server and at the same time act as MCP client to interact with the MCP server.
 
-The sample project generated follows the same structure as this project with some limitations in terms of generated code and configurations (e.g. no tests, no advanced logging).
+The sample project generated follows the same structure as this project with an example tool to calculate the sum of two numeric values.
 
 The choice to use Bun instead of NodeJS was intentional to also showcase that Bun has made significant strides towards becoming a true alternative to NodeJS. It is lightning fast, easy to set up and comes with a lot of functionality out of the box. It also integrates well with existing tool chains, such as ESLint and others.
 
@@ -48,7 +53,7 @@ The choice to use Bun instead of NodeJS was intentional to also showcase that Bu
    bun run build
    ```
 
-This will bundle all code into a single `build/main.js` that can be consumed.
+This will bundle the entry `build/main.js`, which can then be consumed.
 
 ## Setup Claude Desktop
 
@@ -90,3 +95,76 @@ Ensure that it is enabled.
    ![image](./doc/images/claude_conversation.png)
 
 2. The implementation will also handle situations correctly where the project already exists and prompt the user to specify the follow-up action.
+
+## Development
+
+### New Tools
+
+New tools may be added by ensuring each new tool module in `./src/tools` extends `AbstractTool` and implements `ITool` and provides an explicit constructor (for test coverage):
+
+```typescript
+...
+export class NewTool extends AbstractTool implements ITool {
+  // Explicit constructor definition to ensure test coverage in Bun tracks constructor.
+  constructor(fetch: typeof globalThis.fetch = globalThis.fetch) {
+    super(fetch);
+  }
+...
+```
+
+Additionally, the following methods must be implemented (see their corresponding `JSDoc` for details.):
+
+- `getName`
+- `getDescription`
+- `getInputSchema`
+- `validateWithDefaults`
+- `processToolWorkflow`
+
+Use existing tool(s) as guide for the implementation and don't forget to implement a corresponding test.
+
+There is no further configuration required to register any additional tool; they are automatically included upon restart of the MCP server.
+
+### Test Coverage
+
+It may be useful to analyze test coverage gaps using `lcov` reports, to gain better visibility into covered lines and functions.
+
+**NOTES:**
+
+- Constructors for classes should be defined in the respective class, as Bun only tracks a classes functions (including constructors). This is problematic when you inherit from an abstract class with its own constructor, which in turn is not tracked. Thus, simply define the Abstract constructor in the class and call `super`.
+- Having some imports (e.g. `import dedent from "dedent";`) at the top of a module may cause Bun to not correctly track that line as covered. Simply move it behind other imports, and it will correctly track.
+
+#### Prerequisites (Development)
+
+1. Install `lcov`:
+
+   ```sh
+   brew install lcov
+   ```
+
+2. Install VSCode extension `ryanluker.vscode-coverage-gutters` (already defined in [settings.json](./.vscode/settings.json)).
+
+#### Running Test Coverage
+
+1. For most cases, it will suffice to run:
+
+   ```sh
+   bun run test:coverage
+   ```
+
+   **NOTE:** If the coverage is less than 100, but no `Uncovered Line #s` are reported, you may need to investigate further by following the next steps and revisiting the [Notes](#test-coverage) above.
+
+2. For advanced cases, run:
+
+   ```sh
+   bun run test:coverage:lcov
+   ```
+
+   It produces the `lcov` [coverage report](./coverage/lcov.info) that is used by VSCode extension `ryanluker.vscode-coverage-gutters` to visualize covered lines in the editor.
+
+3. If you prefer to have an HTML report, run in your terminal:
+
+   ```sh
+   genhtml --function-coverage --branch-coverage --output-directory coverage-report coverage/lcov.info
+   ```
+
+   It produces an HTML [coverage report](./coverage-report/index.html) that you can inspect in your preferred browser.
